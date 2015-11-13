@@ -1,0 +1,10 @@
+[package]
+name = "rust_image_algos"
+version = "0.1.0"
+authors = ["Scott Cooper <scott.cooper2@mail.mcgill.ca>"]
+
+[dependencies]
+image = "0.5.0"
+docopt = "0.6.75"
+rustc-serialize = "0.3.16"
+crossbeam = "0.1.6"
