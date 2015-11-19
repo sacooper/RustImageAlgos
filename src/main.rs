@@ -1,14 +1,14 @@
-extern crate crossbeam;
 extern crate rustc_serialize;
 extern crate docopt;
 extern crate image;
+extern crate time;
+extern crate rust_image_algos;
 
 use docopt::Docopt;
-use std::fs::File;
 use std::path::Path;
 use image::{GenericImage, Rgb, Pixel};
 
-mod algos;
+use rust_image_algos as algos;
 //use algos::{negation, canny, hough};
 
 
@@ -41,16 +41,11 @@ fn main() {
 
     let (w, h) = img.dimensions();
     let rgb = img.to_rgb();
-    let pixels = rgb.pixels().cloned().collect::<Vec<Rgb<u8>>>();
-    let chunks : Vec<Vec<Rgb<u8>>> = pixels.chunks(w as usize).map(|p| p.iter().cloned().collect()).collect();
+    let neg_dur = time::Duration::span(||{
+        algos::negation((w, h), &rgb).save(&Path::new("negative.png"));
+    });
 
-    algos::negation((w, h), chunks).save(&Path::new("negative.png"));
-
-
-
-
-    //let mut buf : Vec<Rgb<_>> = img.pixels().map(|(_, _, p)| p.to_rgb()).collect();
-    //let data : Vec<&mut [Rgb<_>]> = buf.chunks_mut(w as usize).collect();
-
-
+    if args.flag_time {
+        println!("Negation: {}ms", neg_dur.num_milliseconds());
+    }
 }
