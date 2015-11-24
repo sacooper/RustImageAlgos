@@ -20,11 +20,13 @@ Usage:
 Options:
     -h, --help          Show this message
     -t, --time          Print timing information
+    -d, --debug         Pring debug info
 ";
 
 #[derive(Debug,RustcDecodable)]
 struct Args {
     flag_time: bool,
+    flag_debug: bool,
     arg_image : String
 }
 
@@ -44,8 +46,13 @@ fn main() {
     let neg_dur = time::Duration::span(||{
         algos::negation((w, h), &rgb).save(&Path::new("negative.png"));
     });
+    
+    let canny_dur = time::Duration::span(||{
+        algos::canny((w, h), img.grayscale().as_luma8().unwrap()).save(&Path::new("canny.png"));
+    });
 
     if args.flag_time {
         println!("Negation: {}ms", neg_dur.num_milliseconds());
+        println!("Canny:    {}ms", canny_dur.num_milliseconds());
     }
 }

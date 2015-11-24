@@ -21,7 +21,7 @@ fn bench_negate_simd(b : &mut B){
     let (w, h) = img.dimensions();
     let rgb = img.to_rgb();
     b.iter(||{
-        bb(algos::negation_simd((w, h), &rgb).save(&Path::new("negative.png")));
+        bb(algos::negation::negation_simd((w, h), &rgb).save(&Path::new("negative.png")));
     })
 }
 
@@ -35,6 +35,6 @@ fn bench_negate_no_simd(b : &mut B){
     let (w, h) = img.dimensions();
     let rgb = img.to_rgb();
     b.iter(||{
-        bb(algos::negation_no_simd((w, h), &rgb).save(&Path::new("negative.png")));
+        bb(algos::negation::negation_no_simd((w, h), &rgb).save(&Path::new("negative.png")));
     })
 }

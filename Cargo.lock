@@ -7,6 +7,7 @@ dependencies = [
  "image 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "simd 0.1.0 (git+https://github.com/huonw/simd)",
+ "simple_parallel 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -206,6 +207,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "simd"
 version = "0.1.0"
 source = "git+https://github.com/huonw/simd#be4242121e081206d8769cc60a7d2fa8e23cdc68"
+
+[[package]]
+name = "simple_parallel"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "crossbeam 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "strsim"

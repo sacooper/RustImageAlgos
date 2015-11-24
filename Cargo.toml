@@ -8,5 +8,6 @@ image = "0.5.0"
 docopt = "0.6.75"
 rustc-serialize = "0.3.16"
 crossbeam = "0.1.6"
+time = "*"
 simd = { git = "https://github.com/huonw/simd" }
-time = "0.1"
+simple_parallel = "0.3"
