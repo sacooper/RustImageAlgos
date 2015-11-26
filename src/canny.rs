@@ -4,24 +4,19 @@ use super::NUM_THREADS;
 use std::sync::Arc;
 use simple_parallel;
 use std::f64::consts::PI;
-use std::iter::repeat as rpt;
-use std::f64;
+use std::iter::repeat as rpt; use std::f64;
 
-static CONV_MATRIX : [[f64; 7];7] = [[6.67834529e-07,2.29156256e-05,1.91165461e-04,3.87705531e-04,1.91165461e-04,2.29156256e-05,6.67834529e-07],
-                   [2.29156256e-05,7.86311390e-04,6.55952325e-03,1.33034673e-02,6.55952325e-03,7.86311390e-04,2.29156256e-05],
-                   [1.91165461e-04,6.55952325e-03,5.47204909e-02,1.10979447e-01,5.47204909e-02,6.55952325e-03,1.91165461e-04],
-                   [3.87705531e-04,1.33034673e-02,1.10979447e-01,2.25079076e-01,1.10979447e-01,1.33034673e-02,3.87705531e-04],
-                   [1.91165461e-04,6.55952325e-03,5.47204909e-02,1.10979447e-01,5.47204909e-02,6.55952325e-03,1.91165461e-04],
-                   [2.29156256e-05,7.86311390e-04,6.55952325e-03,1.33034673e-02,6.55952325e-03,7.86311390e-04,2.29156256e-05],
-                   [6.67834529e-07,2.29156256e-05,1.91165461e-04,3.87705531e-04,1.91165461e-04,2.29156256e-05,6.67834529e-07]];
+static GUASS_KERN : [f64; 5] = [1.0, 4.0, 6.0, 4.0, 1.0];
+static GUASS_FACTOR : f64 = 0.00390625;
 
 static GX : [[f64; 3]; 3] = [[-1.0, 0.0, 1.0], [-2.0, 0.0, 2.0], [-1.0, 0.0, 1.0]];
 static GY : [[f64; 3]; 3] = [[-1.0, -2.0, -1.0], [0.0;3], [1.0, 2.0, 2.0]];
 
-const THRESH_HIGH : u8 = 200;
-const THRESH_LOW  : u8 = 100;
+const THRESH_HIGH : u8 = 160;
+const THRESH_LOW  : u8 = 80;
 
-fn convolute(dims: (u32, u32), orig: &mut ImageBuffer<Luma<u8>, Vec<u8>>) {
+fn convolute(orig: &mut ImageBuffer<Luma<u8>, Vec<u8>>) {
+    let dims = orig.dimensions();
     let dims = (dims.0 as usize, dims.1 as usize);
     let data = Arc::new(orig.clone());
     let mut pool = simple_parallel::Pool::new(NUM_THREADS);
@@ -30,22 +25,36 @@ fn convolute(dims: (u32, u32), orig: &mut ImageBuffer<Luma<u8>, Vec<u8>>) {
         for (i, p) in chunk.iter_mut().enumerate() {
             let mut chan = 0f64;
             let x : i64 = ((CHUNK_SIZE * thread_num + i) % dims.0 ) as i64;
-            let y : i64 = ((CHUNK_SIZE * thread_num + i) / dims.1 ) as i64;
-            for c in -3..4 {
-                for r in -3..4 {
-                    let (x, y) = (x + c, y + r);
-                    if (x > 0) && (x < dims.0 as i64) && (y > 0) && (y < dims.1 as i64) {
-                        let r = (r + 3) as usize;
-                        let c = (c + 3) as usize;
-                        let factor = CONV_MATRIX[r][c];
-                        let p = data[(x as u32, y as u32)];
-                        chan = chan + (p[0] as f64)*factor;
-                    }
+            let y : i64 = ((CHUNK_SIZE * thread_num + i) / dims.0 ) as i64;
+            for i in -2..3 {
+                let y = y+i;
+                if (y >= 0) && (y < dims.1 as i64) {
+                    let factor = GUASS_KERN[(i + 2) as usize];
+                    let p = data[(x as u32, y as u32)];
+                    chan = chan + (p[0] as f64) * factor;
                 }
             }
-            *p = chan as u8;
+            *p = ((chan.round() as u64) >> 4) as u8;
         }
-    })
+    });
+    let data = Arc::new(orig.clone());
+    pool.for_(orig.chunks_mut(CHUNK_SIZE).enumerate().zip(rpt(data)), |((thread_num, chunk), data)|{
+        for (i, p) in chunk.iter_mut().enumerate() {
+            let mut chan = 0f64;
+            let x : i64 = ((CHUNK_SIZE * thread_num + i) % dims.0 ) as i64;
+            let y : i64 = ((CHUNK_SIZE * thread_num + i) / dims.0 ) as i64;
+            for i in -2..3 {
+                let x = x+i;
+                if (x >= 0) && (x < dims.0 as i64) {
+                    let factor = GUASS_KERN[(i + 2) as usize];
+                    let p = data[(x as u32, y as u32)];
+                    chan = chan + (((p[0] as u64) << 4) as f64) * factor;
+                }
+            }
+            //println!("{}", (chan*GUASS_FACTOR).round());
+            *p = (chan*GUASS_FACTOR).round() as u8;
+        }
+    });
 }
 
 fn round_angle(angle : f64) -> f64 {
@@ -56,7 +65,8 @@ fn gradiant(x : f64, y : f64) -> f64 {
     (x * x + y * y).sqrt()
 }
 
-fn get_gradiants(dims : (u32, u32), blurred : &GrayImage, data : Arc<GrayImage>) -> Vec<(f64, f64)> {
+fn get_gradiants(blurred : &GrayImage, data : Arc<GrayImage>) -> Vec<(f64, f64)> {
+    let dims = blurred.dimensions();
     let mut pool = simple_parallel::Pool::new(NUM_THREADS);
     let dims = (dims.0 as usize , dims.1 as usize);
     let CHUNK_SIZE = dims.0 * dims.1/ NUM_THREADS;
@@ -64,7 +74,7 @@ fn get_gradiants(dims : (u32, u32), blurred : &GrayImage, data : Arc<GrayImage>)
         pool.map(scope, blurred.chunks(CHUNK_SIZE).enumerate().zip(rpt(data)), |((thread_num, chunk), data)|{
             chunk.into_iter().enumerate().map(|(i, p)|{
                 let x : i64 = ((CHUNK_SIZE * thread_num + i) % dims.0 ) as i64;
-                let y : i64 = ((CHUNK_SIZE * thread_num + i) / dims.1 ) as i64;
+                let y : i64 = ((CHUNK_SIZE * thread_num + i) / dims.0 ) as i64;
                 let mut gx = 0f64;
                 let mut gy = 0f64;
                 for c in -1..2 {
@@ -110,7 +120,8 @@ fn suppress_point(x : usize, y : usize, dims : (usize, usize), grads : &Arc<Vec<
     (a >= strength) || (b >= strength)
 }
 
-fn suppress(dims : (u32, u32), blurred: &mut GrayImage, arc : Arc<GrayImage>, grads: Arc<Vec<(f64, f64)>>) {
+fn suppress(blurred: &mut GrayImage, arc : Arc<GrayImage>, grads: Arc<Vec<(f64, f64)>>) {
+    let dims = blurred.dimensions();
     let mut pool = simple_parallel::Pool::new(NUM_THREADS);
     let dims = (dims.0 as usize, dims.1 as usize);
     let CHUNK_SIZE = dims.0 * dims.1 / NUM_THREADS;
@@ -146,7 +157,8 @@ fn pixel_connected(x : i64, y : i64, arc : &Arc<GrayImage>) -> bool {
     false
 }
 
-fn hysteresis(dims : (u32, u32), image : &mut GrayImage){
+fn hysteresis(image : &mut GrayImage){
+    let dims = image.dimensions();
     let mut pool = simple_parallel::Pool::new(NUM_THREADS);
     let arc = Arc::new(image.clone());
     let dims = (dims.0 as usize, dims.1 as usize);
@@ -154,7 +166,7 @@ fn hysteresis(dims : (u32, u32), image : &mut GrayImage){
     pool.for_(image.chunks_mut(CHUNK_SIZE).enumerate().zip(rpt(arc)), |((thread_num, chunk), arc)|{
         for (i, p) in chunk.iter_mut().enumerate() {
             let x : i64 = ((CHUNK_SIZE * thread_num + i) % dims.0 ) as i64;
-            let y : i64 = ((CHUNK_SIZE * thread_num + i) / dims.1 ) as i64;
+            let y : i64 = ((CHUNK_SIZE * thread_num + i) / dims.0 ) as i64;
             if *p > THRESH_HIGH || (*p > THRESH_LOW && pixel_connected(x, y, &arc)) {
                 *p = 255;
             } else {
@@ -164,13 +176,14 @@ fn hysteresis(dims : (u32, u32), image : &mut GrayImage){
     });
 }
 
-pub fn canny(dims : (u32, u32), image: &ImageBuffer<Luma<u8>, Vec<u8>>) -> GrayImage {
+pub fn canny(image: &ImageBuffer<Luma<u8>, Vec<u8>>) -> GrayImage {
     let mut orig = image.clone();
-    convolute(dims, &mut orig);
+    let d = orig.dimensions();
+    convolute(&mut orig);
     let arc = Arc::new(orig.clone());
-    let grad = get_gradiants(dims, &orig, arc.clone());
+    let grad = get_gradiants(&orig, arc.clone());
     let grad = Arc::new(grad);
-    suppress(dims, &mut orig, arc.clone(), grad);
-    hysteresis(dims, &mut orig);
+    suppress(&mut orig, arc.clone(), grad);
+    hysteresis(&mut orig);
     orig
 }

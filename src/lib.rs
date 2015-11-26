@@ -7,6 +7,8 @@ pub static NUM_THREADS : usize = 8;
 
 pub mod canny;
 pub mod negation;
+pub mod hough;
 
 pub use negation::negation_simd as negation;
 pub use canny::canny;
+pub use hough::hough;

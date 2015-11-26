@@ -3,7 +3,8 @@ use image::{Rgb, Pixel, RgbImage, ImageBuffer};
 use crossbeam::scope;
 use super::NUM_THREADS;
 
-pub fn negation_simd(dims: (u32, u32), image: &ImageBuffer<Rgb<u8>, Vec<u8>>) -> RgbImage {
+pub fn negation_simd(image: &ImageBuffer<Rgb<u8>, Vec<u8>>) -> RgbImage {
+    let dims = image.dimensions();
     scope(|scope|{
         let mut guards = Vec::with_capacity(image.len());
         let chunk_size = ((dims.0 * dims.1) as usize) / NUM_THREADS;
@@ -32,7 +33,8 @@ pub fn negation_simd(dims: (u32, u32), image: &ImageBuffer<Rgb<u8>, Vec<u8>>) ->
     })
 }
 
-pub fn negation_no_simd(dims: (u32, u32), image: &ImageBuffer<Rgb<u8>, Vec<u8>>) -> RgbImage {
+pub fn negation_no_simd(image: &ImageBuffer<Rgb<u8>, Vec<u8>>) -> RgbImage {
+    let dims = image.dimensions();
     scope(|scope|{
         let mut guards = Vec::with_capacity(image.len());
         let chunk_size = ((dims.0 * dims.1) as usize) / NUM_THREADS;

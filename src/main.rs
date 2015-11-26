@@ -41,18 +41,30 @@ fn main() {
         std::process::exit(1);
     });
 
-    let (w, h) = img.dimensions();
     let rgb = img.to_rgb();
-    let neg_dur = time::Duration::span(||{
-        algos::negation((w, h), &rgb).save(&Path::new("negative.png"));
-    });
-    
-    let canny_dur = time::Duration::span(||{
-        algos::canny((w, h), img.grayscale().as_luma8().unwrap()).save(&Path::new("canny.png"));
-    });
+    let grayscale = img.to_luma();
+
+    let start = time::now();
+    let neg = algos::negation(&rgb);
+    let mid1 = time::now();
+
+    let canny = algos::canny(&grayscale);
+
+    let mid2 = time::now();
+    let hough = algos::hough(&canny);
+    let end = time::now();
+
+    neg.save(&Path::new("negative.png"));
+    canny.save(&Path::new("canny.png"));
+    hough.save(&Path::new("hough.png"));
+
+    let neg_dur = mid1 - start;
+    let canny_dur = mid2 - mid1;
+    let hough_dur = end - mid2;
 
     if args.flag_time {
         println!("Negation: {}ms", neg_dur.num_milliseconds());
         println!("Canny:    {}ms", canny_dur.num_milliseconds());
+        println!("Hough:    {}ms", hough_dur.num_milliseconds());
     }
 }
