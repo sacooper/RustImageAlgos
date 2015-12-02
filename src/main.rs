@@ -17,8 +17,7 @@ Usage:
     rust_image_algos [-t | --time] <image>
     rust_image_algos (-h | --help)
 
-Options:
-    -h, --help          Show this message
+Options: -h, --help          Show this message
     -t, --time          Print timing information
     -d, --debug         Pring debug info
 ";
@@ -63,8 +62,8 @@ fn main() {
     let hough_dur = end - mid2;
 
     if args.flag_time {
-        println!("Negation: {}ms", neg_dur.num_milliseconds());
-        println!("Canny:    {}ms", canny_dur.num_milliseconds());
-        println!("Hough:    {}ms", hough_dur.num_milliseconds());
+        println!("Negation: {}us", neg_dur.num_microseconds().unwrap());
+        println!("Canny:    {}us", canny_dur.num_microseconds().unwrap());
+        println!("Hough:    {}us", hough_dur.num_microseconds().unwrap());
     }
 }

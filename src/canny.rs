@@ -4,16 +4,17 @@ use super::NUM_THREADS;
 use std::sync::Arc;
 use simple_parallel;
 use std::f64::consts::PI;
-use std::iter::repeat as rpt; use std::f64;
+use std::iter::repeat as rpt; 
+use std::f64;
 
 static GUASS_KERN : [f64; 5] = [1.0, 4.0, 6.0, 4.0, 1.0];
 static GUASS_FACTOR : f64 = 0.00390625;
 
 static GX : [[f64; 3]; 3] = [[-1.0, 0.0, 1.0], [-2.0, 0.0, 2.0], [-1.0, 0.0, 1.0]];
-static GY : [[f64; 3]; 3] = [[-1.0, -2.0, -1.0], [0.0;3], [1.0, 2.0, 2.0]];
+static GY : [[f64; 3]; 3] = [[-1.0, -2.0, -1.0], [0.0;3], [1.0, 2.0, 1.0]];
 
-const THRESH_HIGH : u8 = 160;
-const THRESH_LOW  : u8 = 80;
+const THRESH_HIGH : u8 = 125;
+const THRESH_LOW  : u8 = 50;
 
 fn convolute(orig: &mut ImageBuffer<Luma<u8>, Vec<u8>>) {
     let dims = orig.dimensions();
@@ -93,8 +94,10 @@ fn get_gradiants(blurred : &GrayImage, data : Arc<GrayImage>) -> Vec<(f64, f64)>
                 }
 
                 let g = gradiant(gx,gy);
-                let angle = (gy/gx).atan() + PI;
-                let angle = angle * PI / 90.0;
+                let angle = (gy).atan2(gx).to_degrees() + 180.0;
+                if (round_angle(angle).is_nan()){
+                    println!("{}, {} -> {}", gy, gx, round_angle(angle));
+                }
                 (g, round_angle(angle))
             }).collect::<Vec<(f64, f64)>>()
         }).flat_map(|x| x.into_iter()).collect()
@@ -117,7 +120,7 @@ fn suppress_point(x : usize, y : usize, dims : (usize, usize), grads : &Arc<Vec<
     };
     let a = if check(idx_a) { grads[idx_a as usize].0 } else { f64::MIN };
     let b = if check(idx_b) { grads[idx_b as usize].0 } else { f64::MIN };
-    (a >= strength) || (b >= strength)
+    (a > strength) || (b > strength) || x < 3 || x > (dims.0 - 3) || y < 3 || y > (dims.1 - 3)
 }
 
 fn suppress(blurred: &mut GrayImage, arc : Arc<GrayImage>, grads: Arc<Vec<(f64, f64)>>) {
@@ -146,8 +149,7 @@ fn suppress(blurred: &mut GrayImage, arc : Arc<GrayImage>, grads: Arc<Vec<(f64, 
 fn pixel_connected(x : i64, y : i64, arc : &Arc<GrayImage>) -> bool {
     let dims = arc.dimensions();
     for dx in -1..2{
-        for dy in -1..2 {
-            let a = x-dx;
+        for dy in -1..2 { let a = x-dx;
             let b = y-dy;
             if (a >= 0) && (a < dims.0 as i64) && (b >= 0) && (b < dims.1 as i64) && arc[(a as u32, b as u32)][0] > THRESH_HIGH {
                 return true;

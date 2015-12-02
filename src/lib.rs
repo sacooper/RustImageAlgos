@@ -3,7 +3,7 @@ extern crate crossbeam;
 extern crate image;
 extern crate simple_parallel;
 use image::{GrayImage, RgbImage};
-pub static NUM_THREADS : usize = 8;
+pub static NUM_THREADS : usize = 4;
 
 pub mod canny;
 pub mod negation;
