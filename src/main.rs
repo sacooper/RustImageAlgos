@@ -6,11 +6,9 @@ extern crate rust_image_algos;
 
 use docopt::Docopt;
 use std::path::Path;
-use image::{GenericImage, Rgb, Pixel};
+use image::Pixel;
 
 use rust_image_algos as algos;
-//use algos::{negation, canny, hough};
-
 
 const USAGE : &'static str = "
 Usage:
@@ -19,13 +17,11 @@ Usage:
 
 Options: -h, --help          Show this message
     -t, --time          Print timing information
-    -d, --debug         Pring debug info
 ";
 
 #[derive(Debug,RustcDecodable)]
 struct Args {
     flag_time: bool,
-    flag_debug: bool,
     arg_image : String
 }
 
@@ -53,9 +49,9 @@ fn main() {
     let hough = algos::hough(&canny);
     let end = time::now();
 
-    neg.save(&Path::new("negative.png"));
-    canny.save(&Path::new("canny.png"));
-    hough.save(&Path::new("hough.png"));
+    neg.save(&Path::new("negative.png")).expect("Error saving negative.png");
+    canny.save(&Path::new("canny.png")).expect("Error saving canny.png");
+    hough.save(&Path::new("hough.png")).expect("Error saving hough.png");
 
     let neg_dur = mid1 - start;
     let canny_dur = mid2 - mid1;

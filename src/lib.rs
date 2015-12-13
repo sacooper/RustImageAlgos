@@ -1,8 +1,8 @@
+#![allow(non_snake_case)]
 extern crate simd;
 extern crate crossbeam;
 extern crate image;
 extern crate simple_parallel;
-use image::{GrayImage, RgbImage};
 pub static NUM_THREADS : usize = 4;
 
 pub mod canny;
